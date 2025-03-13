@@ -1,0 +1,59 @@
+name: CI/CD Pipeline for Node.js Application
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Test job
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test > result.log; tail -n 10 result.log
+        continue-on-error: true
+
+      - name: Upload test results as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: result.log
+
+  # Deploy job
+  deploy:
+    runs-on: [self-hosted, linux]  # Use a self-hosted runner (ensure the runner is labeled as 'linux')  DESKTOP-N80N821
+    needs: test  # Deploy job depends on the successful completion of the test job
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download test results artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: test-results
+
+      - name: Display test results
+        run: cat result.log
+
+      - name: Deploy to self-hosted runner
+        run: |
+          echo "Deploying Node.js application..."
+          # Add deployment steps for your application here, e.g., restart services, copy files, etc.
+          npm run deploy
